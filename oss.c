@@ -8,13 +8,17 @@ extern errno;
 int shm_id;
 int sem_id;
 memory_container* shm_ptr;
-pid_t* pid_list;
 
 
 
 //function declarations for functions not in the header file
 void display_help();
 void child_handler();
+void fork_user(int);
+void initialize_sems();
+void initialize_shm();
+void initialize_pcbs();
+
 
 int main(int argc, char* argv[]) {
 
@@ -33,9 +37,6 @@ int main(int argc, char* argv[]) {
 	char log_name[20];
 	int max_time = 100;
 	int opt;
-
-	//allocate memory for pid table
-	pid_list = malloc(sizeof(pid_t) * MAX);
 
 
 	// gets options set up
@@ -88,7 +89,8 @@ int main(int argc, char* argv[]) {
 	initialize_shm();
 
 
-	//fork 18 children
+	//fork 19 children
+	
 
 	//after forking is done then start with the scheduling
 
@@ -123,16 +125,30 @@ int get_sem() {
 	//creates the sysv semaphores (or tries to at least)
 	key_t key = ftok("Makefile", 'a');
 	//gets chared memory
-	if ((sem_id = semget(key, 1, IPC_CREAT | 0666)) == -1) {
+	if ((sem_id = semget(key, NUM_SEMS, IPC_CREAT | 0666)) == -1) {
 		perror("oss.c: semget failed:");
 		return -1;
 	}
 	return 0;
 }
 
+void sem_wait() {
+	//used to wait and decrement semaphore
+	struct sembuf op;
+	op.sem_num = 0;
+	op.sem_op = -1;
+	op.sem_flg = 0;
+	semop(sem_id, &op, 1);
+}
+
+
+
 void initialize_sems() {
 	//sets the initial values in the semaphores
+	semctl(sem_id, 0, SETVAL, 1);
+}
 
+void initialize_pcbs() {
 
 }
 
@@ -141,11 +157,15 @@ void initialize_shm() {
 
 }
 
+void fork_user(int index) {
+
+
+}
+
 void cleanup() {
 	shmdt(shm_ptr);
 	shmctl(shm_id, IPC_RMID, NULL);	
 	semctl(sem_id, 0, IPC_RMID, NULL);
-	free(pid_list);
 }
 
 void early_termination_handler() {
