@@ -12,6 +12,8 @@
 #include <errno.h>
 #include <time.h>
 
+#define MAX 19
+
 typedef struct {
 	//stuff I think I will need based off the prompt
 	float last_time;				//when last executed
@@ -33,6 +35,8 @@ int get_sem();
 void initialize_sems();
 void initialize_shm();
 void cleanup();
+void early_termination_handler();
+
 
 
 

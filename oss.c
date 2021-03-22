@@ -8,15 +8,33 @@ extern errno;
 int shm_id;
 int sem_id;
 memory_container* shm_ptr;
+pid_t* pid_list;
+
+
 
 //function declarations for functions not in the header file
 void display_help();
+void child_handler();
 
 int main(int argc char* argv[]) {
+
+	//signal handlers
+	signal(SIGINT, early_termination_handler);
+	signal(SIGKILL, early_termination_handler);
+	signal(SIGALRM, early_termination_handler);
+
+	//set up for the ctrl_c handler
+	struct sigaction sa;
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = child_handler;
+	sigaction(SIGCHLD, &sa, NULL);
 
 	//variables 
 	char log_name[20];
 	int max_time = 100;
+
+	//allocate memory for pid table
+	pid_list = malloc(sizeof(pid_t) * MAX);
 
 
 	// gets options set up
@@ -42,6 +60,10 @@ int main(int argc char* argv[]) {
 			exit(0);
 		}
 	}
+
+	//sets the alarm for the timeout based on the time provide
+	//or if not provided, the default of 100 seconds
+	alarm(max_time);
 
 	//this happens if the user doesnt want to set their own logfile name. Defaults to 'logfile'
 	if (strcmp(log_name, "")) {
@@ -84,7 +106,7 @@ int get_shm() {
 	//creates the shared memory and attaches the pointer for it (or tries to at least)
 	key_t key = ftok("README.md", 'a');
 	//gets chared memory
-	if ((shm_id = semget(key, (sizeof(pcb) * 18) + sizeof(memory_container), IPC_CREAT | 0666))) == -1) {
+	if ((shm_id = semget(key, (sizeof(pcb) * MAX) + sizeof(memory_container), IPC_CREAT | 0666))) == -1) {
 		perror("oss.c: shmget failed:");
 		return -1;
 	}
@@ -122,4 +144,15 @@ void cleanup() {
 	shmdt(shm_ptr);
 	shmctl(shm_id, IPC_RMID, NULL);	
 	semctl(sem_id, 0, IPC_RMID, NULL);
+	free(pid_list);
+}
+
+void early_termination_handler() {
+	cleanup();
+	exit(0);
+}
+
+void child_handler() {
+
+
 }
