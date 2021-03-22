@@ -26,7 +26,7 @@ typedef struct {
 
 typedef struct {
 	//will add more stuff later when I know what I need
-	pcb_arr = pcb[18];
+	pcb pcb_arr = pcb[18];
 } memory_container; //used to hold anything that we put in shared memory
 
 //function definitions
