@@ -4,7 +4,7 @@
 //needed for error handling
 extern errno;
 
-int main(int argc char* argv[]) {
+int main(int argc, char* argv[]) {
 
 
 }

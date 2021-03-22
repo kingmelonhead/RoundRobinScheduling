@@ -7,3 +7,6 @@ oss: oss.c shared.h
 
 user: user.c shared.h
 	$(CC) -o $@ $^
+
+clean:
+	rm logfile user oss

@@ -16,7 +16,7 @@ pid_t* pid_list;
 void display_help();
 void child_handler();
 
-int main(int argc char* argv[]) {
+int main(int argc, char* argv[]) {
 
 	//signal handlers
 	signal(SIGINT, early_termination_handler);
@@ -32,6 +32,7 @@ int main(int argc char* argv[]) {
 	//variables 
 	char log_name[20];
 	int max_time = 100;
+	int opt;
 
 	//allocate memory for pid table
 	pid_list = malloc(sizeof(pid_t) * MAX);
@@ -106,7 +107,7 @@ int get_shm() {
 	//creates the shared memory and attaches the pointer for it (or tries to at least)
 	key_t key = ftok("README.md", 'a');
 	//gets chared memory
-	if ((shm_id = semget(key, (sizeof(pcb) * MAX) + sizeof(memory_container), IPC_CREAT | 0666))) == -1) {
+	if ((shm_id = semget(key, (sizeof(pcb) * MAX) + sizeof(memory_container), IPC_CREAT | 0666)) == -1) {
 		perror("oss.c: shmget failed:");
 		return -1;
 	}
