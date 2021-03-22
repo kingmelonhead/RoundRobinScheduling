@@ -34,7 +34,7 @@ int main(int argc, char* argv[]) {
 		exit(0);
 	}
 
-
+	sem_signal(shm_id);
 }
 
 int get_shm() {

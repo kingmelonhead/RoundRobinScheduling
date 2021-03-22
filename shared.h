@@ -12,7 +12,7 @@
 #include <errno.h>
 #include <time.h>
 
-#define MAX 19
+#define MAX 18
 #define NUM_SEMS 1
 
 typedef struct {
@@ -40,11 +40,8 @@ typedef struct {
 	int scheduled_pid;
 
 	//keeps track of various times
-	float totel_run_time;
-	float total_wait_time;
-	float total_cpu_time;
-
-	//more times
+	unsigned int next_fork_sec;
+	unsigned int next_fork_nano;
 	unsigned int clock_nano;
 	unsigned int clock_seconds;
 
