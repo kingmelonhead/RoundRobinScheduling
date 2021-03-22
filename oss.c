@@ -111,7 +111,7 @@ int get_shm() {
 		return -1;
 	}
 	//tries to attach shared memory
-	if ((shm_ptr = (pcb*)shmat(shm_id, 0, 0)) == -1) {
+	if ((shm_ptr = (memory_container *)shmat(shm_id, 0, 0)) == (void*)-1) {
 		perror("oss.c: shmat failed:");
 		return -1;
 	}
