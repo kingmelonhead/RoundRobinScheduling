@@ -21,7 +21,7 @@ typedef struct {
 
 	bool is_done;					//is the user done
 	bool has_ran;					//after dispatch, has user ran
-	pid_t this_pid;					//pid of process in question 
+	int this_pid;					//pid of process in question 
 	int this_index;					//index of process in question (may not even need this idk yet)
 	float last_time;				//when last executed
 	int prev_burst;					//time elapsed in previous burst
