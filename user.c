@@ -15,6 +15,7 @@ void death_handler();
 
 int main(int argc, char* argv[]) {
 
+
 	signal(SIGKILL, death_handler);
 	signal(SIGINT, death_handler);
 	signal(SIGTERM, death_handler);
@@ -34,7 +35,24 @@ int main(int argc, char* argv[]) {
 		exit(0);
 	}
 
+	//get the index by the pid
+
+
+
+	//type of process is randomized (wether its i/o or cpu)
+
+
+	//determine if an interupt will happen
+
+
+	//calculate times accordingly and write to pcb
+	//these times will be used for calculations and incrementations in oss.c
+
+	//signal that it is done so a new task can be scheduled
 	sem_signal(shm_id);
+
+	//detatch shared memory
+	cleanup();
 }
 
 int get_shm() {

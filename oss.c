@@ -26,12 +26,22 @@ void initialize_shm();
 void initialize_pcb(int);
 void log_string(char *);
 int get_next_location();
-int check_in_ready(int);
+void purge_blocked();
 void set_next_fork();
 void spawn();
 int get_user_count();
+int get_index_by_pid(int);
+
 
 int main(int argc, char* argv[]) {
+
+	//initialzie global variables of interest in the main
+
+	ready_in = 0;
+	ready_out = -1;
+
+	blocked_in = 0;
+	blocked_out = -1;
 
 	srand(time(NULL));
 
@@ -51,7 +61,7 @@ int main(int argc, char* argv[]) {
 	int max_time = 100;
 	int opt;
 	int i;
-	int temp;
+	int temp, ready;
 
 
 	// gets options set up
@@ -142,16 +152,25 @@ int main(int argc, char* argv[]) {
 
 		//scan the blocked queue to see if the clock has passed their "blocked until" time
 		//if so move back to ready at the tail (ready_in)
+		purge_blocked();
 
 		//then if there is stuff in the ready queue, tell the process at "ready_out" to go
 		//this is done by changing that specific pcbs wait flag to false
 
-		//wait till it signals that its done
-		sem_wait(sem_id);
+		//if structure will eveluate to true in the case that there are things in the ready queue
+		if (ready_in != ready_out && ready_out != -1) {
+			//this will cut the process loose
+			temp = get_index_by_pid(ready_pids[ready_out]);
+			shm_ptr->pcb_arr[temp].wait_on_oss = false;
 
-		//read the stuff that the pid wrote to its pcb and log it
+			//wait till it signals that its done
+			sem_wait(sem_id);
 
-		//move it to blocked, or remove from ready entirely, do what is appropriate
+			//read the stuff that the pid wrote to its pcb and log it
+
+			//move it to blocked, or remove from ready entirely, do what is appropriate
+		}
+
 
 		//increment time at end of loop to simulate the scheduler taking time
 
@@ -167,6 +186,7 @@ void display_help() {
 
 
 }
+
 
 void set_next_fork() {
 	shm_ptr->next_fork_sec = (rand() % 2) + shm_ptr->clock_seconds;
@@ -211,6 +231,8 @@ void sem_wait() {
 
 void log_string(char* string) {
 
+	//log the passed string to the log file
+
 }
 
 
@@ -227,6 +249,7 @@ void initialize_pcb(int index) {
 	shm_ptr->pcb_arr[index].prev_burst = 0;
 	shm_ptr->pcb_arr[index].last_time = (float)shm_ptr->clock_seconds + ((float)shm_ptr->clock_nano / 1000);
 	shm_ptr->pcb_arr[index].this_index = index;
+	shm_ptr->pcb_arr[index].wait_on_oss = true;
 	sprintf(log_buffer, "Process control block at index %d has been initialized", index);
 	log_string(log_buffer);
 }
@@ -297,8 +320,29 @@ void spawn() {
 	shm_ptr->user_count++;
 }
 
-int check_in_ready(int id) {
+int get_index_by_pid(int pid) {
+	int i;
+	for (i = 0; i < MAX; i++) {
+		if (shm_ptr->pcb_arr[i].this_pid == pid) {
+			return shm_ptr->pcb_arr[i].this_index;
+		}
+	}
+	return -1;
+}
 
+void purge_blocked() {
+
+	//go through blocked queue stating at blocked_out
+
+	//if clock has passed wait until time, then move pid to ready_in
+
+	//if so then also remove it from the blocked queue
+
+	//increment blocked_out
+
+	//increment ready_in
+
+	//if not then do nothing
 }
 
 void cleanup() {

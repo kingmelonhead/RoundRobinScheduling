@@ -18,7 +18,7 @@
 typedef struct {
 
 	//stuff I think I will need based off the prompt
-
+	bool wait_on_oss;
 	bool is_done;					//is the user done
 	bool has_ran;					//after dispatch, has user ran
 	int this_pid;					//pid of process in question 
