@@ -181,9 +181,20 @@ int main(int argc, char* argv[]) {
 			//wait till it signals that its done
 			sem_wait(sem_id);
 
-			//read the stuff that the pid wrote to its pcb and log it
+			//interpret what the result of the pcb means, log accordingly
+			if (shm_ptr->pcb_arr[temp].early_term) {
+				//if it terminated early
 
-			//move it to blocked, or remove from ready entirely, do what is appropriate
+			}
+			else if (shm_ptr->pcb_arr[temp].blocked) {
+				//if it got blocked
+
+			}
+			else {
+				//only other condition is that it completed before being interupted
+			}
+
+			
 		}
 
 
@@ -285,12 +296,11 @@ void initialize_pcb(int index) {
 	shm_ptr->pcb_arr[index].blocked = false;
 	shm_ptr->pcb_arr[index].early_term = false;
 	shm_ptr->pcb_arr[index].wait_on_oss = true;
-
-
+	shm_ptr->pcb_arr[index].start_nano = 0;
+	shm_ptr->pcb_arr[index].start_sec = 0;
 	shm_ptr->pcb_arr[index].cpu_time = 0;
 	shm_ptr->pcb_arr[index].system_time = 0;
 	shm_ptr->pcb_arr[index].prev_burst = 0;
-	shm_ptr->pcb_arr[index].last_time = (float)shm_ptr->clock_seconds + ((float)shm_ptr->clock_nano / 1000);
 	shm_ptr->pcb_arr[index].this_index = index;
 	
 	sprintf(log_buffer, "Process control block at index %d has been initialized", index);

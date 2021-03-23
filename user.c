@@ -9,8 +9,10 @@ int shm_id, sem_id;
 memory_container* shm_ptr;
 int user_index;
 int user_pid;
+int sec_diff;
 
 void death_handler();
+void normalize_time();
 
 
 int main(int argc, char* argv[]) {
@@ -43,29 +45,46 @@ int main(int argc, char* argv[]) {
 
 	while (shm_ptr->pcb_arr[user_index].wait_on_oss);
 
-	//determine if process will run for a little and then just die, or if it will become either a cpu or I/O task
-	//based off of a random number
-	srand(user_pid);
-	num = rand() % (QUANTUM + 1);
-	if (num % 2 == 0) {
-		time = rand() % 11;
-		printf("PID: %d is terminating early after working for %d ms\n", user_pid, time);
-		shm_ptr->pcb_arr[user_index].early_term = true;
-		shm_ptr->pcb_arr[user_index].prev_burst = time;
-		shm_ptr->pcb_arr[user_index].cpu_time += time;
+	if (shm_ptr->pcb_arr[user_index].start_nano == 0 && shm_ptr->pcb_arr[user_index].start_sec == 0) {
+		//determine if process will run for a little and then just die, or if it will become either a cpu or I/O task
+		//based off of a random number
+		srand(user_pid);
+		num = rand() % (QUANTUM + 1);
+		if (num % 2 == 0) {
+			time = rand() % 11;
+			printf("PID: %d is terminating early after working for %d ms\n", user_pid, time);
+			shm_ptr->pcb_arr[user_index].early_term = true;
+			shm_ptr->pcb_arr[user_index].prev_burst = time;
+			shm_ptr->pcb_arr[user_index].cpu_time += time;
+			shm_ptr->pcb_arr[user_index].system_time += time;
+			sem_signal(shm_id);
+			cleanup();
+			exit(0);
+		}
+		//if the thing doesnt end pre maturely then clock at dispatch time is bookmarked.
+		//used for ellapsed time calculation later on
+		shm_ptr->pcb_arr[user_index].start_nano = shm_ptr->clock_nano;
+		shm_ptr->pcb_arr[user_index].start_sec = shm_ptr->clock_seconds;
 
-		sem_signal(shm_id);
-		cleanup();
-		exit(0);
-
-
+		//type of process is randomized (wether its i/o or cpu)
+		num = rand() % (100 + 1);
+		if (num % 3 == 0) {
+			shm_ptr->pcb_arr[user_index].proc_type = IO;
+		}
+		else {
+			shm_ptr->pcb_arr[user_index].proc_type = CPU;
+		}
 	}
 	
-
-	//type of process is randomized (wether its i/o or cpu)
-
-
 	//determine if an interupt will happen
+	//differs by process type
+	if (shm_ptr->pcb_arr[user_index].proc_type == IO) {
+		//can be interrupted
+	}
+	else {
+		//less likely to be interrupted
+		//for testing this wont be able to be interrupted 
+	}
 
 
 	//calculate times accordingly and write to pcb
@@ -121,4 +140,14 @@ void death_handler() {
 
 void cleanup() {
 	shmdt(shm_ptr);
+}
+
+void normalize_time() {
+	unsigned int nano = shm_ptr->pcb_arr[user_index].start_nano;
+	int sec;
+	while (nano >= 1000000000) {
+		shm_ptr->pcb_arr[user_index].start_sec += 1;
+		shm_ptr->pcb_arr[user_index].start_nano -= 1000000000;
+		nano -= 1000000000;
+	}
 }
