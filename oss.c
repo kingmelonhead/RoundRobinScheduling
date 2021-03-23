@@ -31,6 +31,8 @@ void set_next_fork();
 void spawn();
 int get_user_count();
 int get_index_by_pid(int);
+void normalize_clock();
+void normalize_fork();
 
 
 int main(int argc, char* argv[]) {
@@ -62,6 +64,8 @@ int main(int argc, char* argv[]) {
 	int opt;
 	int i;
 	int temp, ready;
+	unsigned int nano_change;
+	int rand_time;
 
 
 	// gets options set up
@@ -124,6 +128,7 @@ int main(int argc, char* argv[]) {
 
 	set_next_fork();
 
+
 	while (1) {
 
 		//count the total number of users in the system
@@ -161,6 +166,16 @@ int main(int argc, char* argv[]) {
 		if (ready_in != ready_out && ready_out != -1) {
 			//this will cut the process loose
 			temp = get_index_by_pid(ready_pids[ready_out]);
+			shm_ptr->scheduled_pid = ready_pids[ready_out];
+			shm_ptr->scheduled_index = temp;
+
+			//rand()%((nMax+1)-nMin) + nMin -- from stack overflow for reference becasue I always forget this
+			//progress time before dispatch
+			rand_time = rand() % ((10000 + 1) - 100) + 100;
+			shm_ptr->clock_nano += rand_time;
+			normalize_clock();
+
+			//dispatch
 			shm_ptr->pcb_arr[temp].wait_on_oss = false;
 
 			//wait till it signals that its done
@@ -173,7 +188,10 @@ int main(int argc, char* argv[]) {
 
 
 		//increment time at end of loop to simulate the scheduler taking time
-
+		shm_ptr->clock_seconds += 1;
+		nano_change = rand() % 1001;
+		shm_ptr->clock_nano += nano_change;
+		normalize_clock();
 	}
 
 
@@ -187,10 +205,29 @@ void display_help() {
 
 }
 
+void normalize_clock() {
+	unsigned int nano = shm_ptr->clock_nano;
+	int sec;
+	if (nano >= 1000000000) {
+		shm_ptr->clock_seconds += 1;
+		shm_ptr->clock_nano -= 1000000000;
+	}
+}
+
+void normalize_fork() {
+	unsigned int nano = shm_ptr->next_fork_nano;
+	int sec;
+	if (nano >= 1000000000) {
+		shm_ptr->next_fork_sec += 1;
+		shm_ptr->next_fork_nano -= 1000000000;
+	}
+}
+
 
 void set_next_fork() {
 	shm_ptr->next_fork_sec = (rand() % 2) + shm_ptr->clock_seconds;
-	shm_ptr->next_fork_nano = (rand() % 1001) + shm_ptr->clock_seconds;
+	shm_ptr->next_fork_nano = (rand() % 1001) + shm_ptr->clock_nano;
+	normalize_fork();
 }
 
 int get_shm() {
@@ -229,6 +266,8 @@ void sem_wait() {
 	semop(sem_id, &op, 1);
 }
 
+
+
 void log_string(char* string) {
 
 	//log the passed string to the log file
@@ -242,14 +281,18 @@ void initialize_sems() {
 }
 
 void initialize_pcb(int index) {
-	shm_ptr->pcb_arr[index].is_done = false;
-	shm_ptr->pcb_arr[index].cpu_time = false;
+
+	shm_ptr->pcb_arr[index].blocked = false;
+	shm_ptr->pcb_arr[index].early_term = false;
+	shm_ptr->pcb_arr[index].wait_on_oss = true;
+
+
 	shm_ptr->pcb_arr[index].cpu_time = 0;
 	shm_ptr->pcb_arr[index].system_time = 0;
 	shm_ptr->pcb_arr[index].prev_burst = 0;
 	shm_ptr->pcb_arr[index].last_time = (float)shm_ptr->clock_seconds + ((float)shm_ptr->clock_nano / 1000);
 	shm_ptr->pcb_arr[index].this_index = index;
-	shm_ptr->pcb_arr[index].wait_on_oss = true;
+	
 	sprintf(log_buffer, "Process control block at index %d has been initialized", index);
 	log_string(log_buffer);
 }
@@ -257,13 +300,11 @@ void initialize_pcb(int index) {
 void initialize_shm() {
 	//sets initial values in the shared memory
 	int i;
-	shm_ptr->wait_flag = true;
-	shm_ptr->user_count = 0;
-	shm_ptr->done_count = 0;
-	shm_ptr->time_quantum = 10;   //time in ms
+	shm_ptr->user_count = 0;   
 	shm_ptr->clock_nano = 0;
 	shm_ptr->clock_seconds = 0;
 	shm_ptr->scheduled_pid = 0;
+	shm_ptr->scheduled_index = -1;
 	for (i = 0; i < MAX; i++) {
 		initialize_pcb(i);
 	}

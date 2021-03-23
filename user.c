@@ -8,7 +8,7 @@ extern errno;
 int shm_id, sem_id;
 memory_container* shm_ptr;
 int user_index;
-pid_t user_pid;
+int user_pid;
 
 void death_handler();
 
@@ -20,8 +20,8 @@ int main(int argc, char* argv[]) {
 	signal(SIGINT, death_handler);
 	signal(SIGTERM, death_handler);
 
-	user_pid = getpid();
-
+	int num;
+	unsigned int time;
 
 	//create the shared memory
 	if (get_shm() == -1) {
@@ -35,9 +35,32 @@ int main(int argc, char* argv[]) {
 		exit(0);
 	}
 
-	//get the index by the pid
+	//get the pid
+	user_pid = shm_ptr->scheduled_pid;
+	
+	//get the index of the process in shared memory
+	user_index = shm_ptr->scheduled_index;
+
+	while (shm_ptr->pcb_arr[user_index].wait_on_oss);
+
+	//determine if process will run for a little and then just die, or if it will become either a cpu or I/O task
+	//based off of a random number
+	srand(user_pid);
+	num = rand() % (QUANTUM + 1);
+	if (num % 2 == 0) {
+		time = rand() % 11;
+		printf("PID: %d is terminating early after working for %d ms\n", user_pid, time);
+		shm_ptr->pcb_arr[user_index].early_term = true;
+		shm_ptr->pcb_arr[user_index].prev_burst = time;
+		shm_ptr->pcb_arr[user_index].cpu_time += time;
+
+		sem_signal(shm_id);
+		cleanup();
+		exit(0);
 
 
+	}
+	
 
 	//type of process is randomized (wether its i/o or cpu)
 
