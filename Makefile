@@ -9,4 +9,4 @@ user: user.c shared.h
 	$(CC) -o $@ $^
 
 clean:
-	rm logfile user oss
+	rm logfile user oss *.log

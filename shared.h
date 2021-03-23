@@ -34,8 +34,8 @@ typedef struct {
 	unsigned int start_nano;				//start time of first dispatch, used in total system time elapsed calculation
 	unsigned int blocked_until_sec;			//used to hold the time that marks whem a process can be set to ready again 
 	unsigned int blocked_until_nano;		//used to hold the time that marks whem a process can be set to ready again
-	unsigned int system_time;				//total time the process has existed in the system
-	unsigned int cpu_time;					//total time that the process has actively been "doing work"
+	float system_time;				//total time the process has existed in the system in ms
+	float cpu_time;					//total time that the process has actively been "doing work" in ms
 
 } pcb; //process control block
 
