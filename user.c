@@ -212,11 +212,13 @@ void sem_signal() {
 }
 
 void death_handler() {
+	//does what name function implies
 	cleanup();
 
 }
 
 void cleanup() {
+	//does what name function implies
 	shmdt(shm_ptr);
 }
 

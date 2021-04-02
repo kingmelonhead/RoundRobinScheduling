@@ -209,7 +209,7 @@ int main(int argc, char* argv[]) {
 			//dispatch
 			
 			
-			sprintf(log_buffer,"OSS: Dispatching PID %d at index %d of the ready queue, index %d in shm \n", temp_pid, ready_out, temp);
+			sprintf(log_buffer,"OSS: Dispatching PID %d to do work\n", temp_pid);
 			log_string(log_buffer);
 			//this will cut the process loose
 			shm_ptr->scheduled_pid = temp_pid;
@@ -268,6 +268,7 @@ int main(int argc, char* argv[]) {
 }
 
 int count_ready() {
+	//gets number of ready processes
 	int count = 0;
 	int i;
 	for (i = 0; i < MAX; i++) {
@@ -279,11 +280,20 @@ int count_ready() {
 }
 
 void display_help() {
-
-
+	printf("This program is an operating system simulator that simulates schedule processing using round robin scheduling\n");
+	printf("With no options given to the executable the program will make a log file of default name 'logfile' and will run for 100 seconds max\n");
+	printf("If the log file goes over 1000 lines, which it will with the default time limit, it gets terminated early\n");
+	printf("Program can also be terminated early by the user by pressing ctrl + c\n");
+	printf("----------------------------------- options --------------------------\n\n");
+	printf("[-h]              Displays help menu (you are here now)\n\n");
+	printf("[-s] [argument]   Sets the max time the program can run (in seconds) to value in argument\n\n");
+	printf("[-l] [argument]   Overrides the default logfile name with whatever is in argument\n\n");
+	printf("Now exiting program....\n\n");
+	exit(0);
 }
 
 void normalize_clock() {
+	//keeps clock variable from overflowing
 	unsigned int nano = shm_ptr->clock_nano;
 	int sec;
 	if (nano >= 1000000000) {
@@ -293,6 +303,7 @@ void normalize_clock() {
 }
 
 void normalize_fork() {
+	//keeps clock variable from overflowing
 	unsigned int nano = shm_ptr->next_fork_nano;
 	int sec;
 	if (nano >= 1000000000) {
@@ -368,7 +379,7 @@ void initialize_sems() {
 }
 
 void initialize_pcb(int index) {
-
+	//does what the function name implies
 	shm_ptr->pcb_arr[index].blocked = false;
 	shm_ptr->pcb_arr[index].early_term = false;
 	shm_ptr->pcb_arr[index].wait_on_oss = true;
@@ -407,6 +418,7 @@ int get_next_location() {
 }
 
 int get_user_count() {
+	//does what the function name implies
 	int total = 0;
 	int i;
 	for (i = 0; i < MAX; i++) {
@@ -439,7 +451,7 @@ void fork_user(int index) {
 			initialize_pcb(index);
 			//printf("PID: %d has been forked\n", pid);
 			ready_pids[ready_in] = shm_ptr->pcb_arr[index].this_pid;
-			sprintf(log_buffer, "OSS: PID: %d was forked in the ready queue at index %d\n", shm_ptr->pcb_arr[index].this_pid, ready_in);
+			sprintf(log_buffer, "OSS: PID: %d was forked and placed in the ready queue\n", shm_ptr->pcb_arr[index].this_pid);
 			log_string(log_buffer);
 			ready_in = (ready_in + 1) % MAX;
 			//printf("ready in incremented\n");
@@ -451,12 +463,14 @@ void fork_user(int index) {
 }
 
 void spawn() {
+	//driver function for spawning user processes
 	int temp;
 	temp = get_next_location();
 	fork_user(temp);
 }
 
 int get_index_by_pid(int pid) {
+	//gets the index of the passed pid in array
 	int i;
 	for (i = 0; i < MAX; i++) {
 		if (shm_ptr->pcb_arr[i].this_pid == pid) {
@@ -467,7 +481,8 @@ int get_index_by_pid(int pid) {
 }
 
 void purge_blocked() {
-
+	//function that gets called every iteration of the while loop to check to see if any of the blocked processes can be
+	//moved to the ready queue
 	int pid = blocked_queue[blocked_out];
 	int i = get_index_by_pid(pid);
 	if (pid != 0) {
