@@ -29,9 +29,9 @@ int main(int argc, char* argv[]) {
 	sprintf(log_name, "%d.log", rand_num);
 
 
-	file_ptr = fopen(log_name, "a");
+	//file_ptr = fopen(log_name, "a");
 
-	fprintf(file_ptr, "Log opened");
+	//fprintf(file_ptr, "Log opened");
 
 
 	signal(SIGKILL, death_handler);
@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
 		exit(0);
 	}
 
-	fprintf(file_ptr, "Process got shared memory\n");
+	//fprintf(file_ptr, "Process got shared memory\n");
 
 
 
@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
 		exit(0);
 	}
 
-	fprintf(file_ptr, "Process got semaphores\n");
+	//fprintf(file_ptr, "Process got semaphores\n");
 
 	//get the index of the process in shared memory
 	
@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
 
 		user_index = shm_ptr->scheduled_index;
 
-		printf("USER: PID %d woke up\n", user_pid);
+		//printf("USER: PID %d woke up\n", user_pid);
 		
 		shm_ptr->pcb_arr[user_index].blocked = false;
 
@@ -90,13 +90,14 @@ int main(int argc, char* argv[]) {
 			//based off of a random number
 			srand(user_pid);
 			num = rand() % (QUANTUM + 1);
-			fprintf(file_ptr, "random number to base early termination on is %d\n", num);
+			//fprintf(file_ptr, "random number to base early termination on is %d\n", num);
 			if (num % 2 == 0) {
 				time = rand() % 11;
-				printf("PID: %d is terminating early after working for %d ms\n", user_pid, time);
-				fprintf(file_ptr, "Process is terminating early\n");
+				burst = rand() % ((10000000 + 1) - 1) + 1;
+				//printf("PID: %d is terminating early after working for %d ms\n", user_pid, time);
+				//fprintf(file_ptr, "Process is terminating early\n");
 				shm_ptr->pcb_arr[user_index].early_term = true;
-				shm_ptr->pcb_arr[user_index].prev_burst = time;
+				shm_ptr->pcb_arr[user_index].prev_burst = burst;
 				shm_ptr->pcb_arr[user_index].cpu_time += time;
 				shm_ptr->pcb_arr[user_index].system_time += time;
 				sem_signal(shm_id);
@@ -112,11 +113,11 @@ int main(int argc, char* argv[]) {
 			num = rand() % (100 + 1);
 			if (num % 3 == 0) {
 				shm_ptr->pcb_arr[user_index].proc_type = IO;
-				fprintf(file_ptr, "Process is IO\n");
+				//fprintf(file_ptr, "Process is IO\n");
 			}
 			else {
 				shm_ptr->pcb_arr[user_index].proc_type = CPU;
-				fprintf(file_ptr, "Process is CPU\n");
+				//fprintf(file_ptr, "Process is CPU\n");
 			}
 		}
 
@@ -126,7 +127,7 @@ int main(int argc, char* argv[]) {
 			//can be interrupted
 			num = rand() % 13;
 			if (num % 4 == 0) {
-				fprintf(file_ptr, "Process is being blocked\n");
+				//fprintf(file_ptr, "Process is being blocked\n");
 				shm_ptr->pcb_arr[user_index].blocked = true;
 				shm_ptr->pcb_arr[user_index].blocked_until_sec = shm_ptr->clock_seconds + (rand() % ((5 + 1) - 1) +1);
 				shm_ptr->pcb_arr[user_index].blocked_until_nano = shm_ptr->clock_nano + (rand() % 1001);
@@ -137,7 +138,7 @@ int main(int argc, char* argv[]) {
 
 			}
 			else {
-				fprintf(file_ptr, "Process is not being blocked\n");
+				//fprintf(file_ptr, "Process is not being blocked\n");
 				finished = true;
 			}
 		}
@@ -167,9 +168,10 @@ int main(int argc, char* argv[]) {
 		//signal that it is done so a new task can be scheduled
 		sem_signal(shm_id);
 	}
-
+	//printf("attempting to exit user\n");
 	//detatch shared memory
 	cleanup();
+	return 0;
 }
 
 int get_shm() {
@@ -201,7 +203,7 @@ int get_sem() {
 
 void sem_signal() {
 	//used to increment semaphore
-	printf("USER: Signaling that done\n");
+	//printf("USER: Signaling that done\n");
 	struct sembuf op;
 	op.sem_num = 0;
 	op.sem_op = 1;

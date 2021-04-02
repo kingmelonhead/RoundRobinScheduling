@@ -15,6 +15,7 @@ int ready_pids[MAX];
 int blocked_queue[MAX];
 int ready_in, ready_out, blocked_in, blocked_out;
 int temp_pid;
+int line_count = 0;
 
 
 
@@ -116,7 +117,7 @@ int main(int argc, char* argv[]) {
 	//open log file
 	file_ptr = fopen(log_name, "a");
 
-	fprintf(file_ptr, "log opened by oss.c\n");
+	//fprintf(file_ptr, "log opened by oss.c\n");
 
 
 	//create the semaphores
@@ -151,8 +152,7 @@ int main(int argc, char* argv[]) {
 	int temp_pid;
 	while (1) {
 
-		sleep(2);
-
+		sleep(1);
 		ready_count = count_ready();
 
 		//count the total number of users in the system
@@ -160,7 +160,7 @@ int main(int argc, char* argv[]) {
 
 		user_count_debug = shm_ptr->user_count;
 
-		printf("user count: %d, \n", user_count_debug);
+		//printf("user count: %d, \n", user_count_debug);
 		//below block is for spawning new children
 
 		//makes a new user if the user count is less than the max alowed
@@ -193,11 +193,11 @@ int main(int argc, char* argv[]) {
 
 		//if structure will eveluate to true in the case that there are things in the ready queue
 		if (ready_count > 0) {
-			printf("things are ready\n");
+			//printf("things are ready\n");
 			
 			temp_pid = ready_pids[ready_out];
 			temp = get_index_by_pid(temp_pid);
-			printf("setting scheduled index to %d\n", temp);
+			//printf("setting scheduled index to %d\n", temp);
 			shm_ptr->scheduled_index = temp;
 
 			//rand()%((nMax+1)-nMin) + nMin -- from stack overflow for reference becasue I always forget this
@@ -209,7 +209,8 @@ int main(int argc, char* argv[]) {
 			//dispatch
 			
 			
-			printf("waking up PID %d at index %d of the ready queue, index %d in shm \n", temp_pid, ready_out, temp);
+			sprintf(log_buffer,"OSS: Dispatching PID %d at index %d of the ready queue, index %d in shm \n", temp_pid, ready_out, temp);
+			log_string(log_buffer);
 			//this will cut the process loose
 			shm_ptr->scheduled_pid = temp_pid;
 			
@@ -218,12 +219,12 @@ int main(int argc, char* argv[]) {
 
 			//wait till it signals that its done
 			sem_wait(sem_id);
-			printf("recieved signal that done\n");
+			//printf("recieved signal that done\n");
 
 			//interpret what the result of the pcb means, log accordingly
 			if (shm_ptr->pcb_arr[temp].early_term) {
 				//if it terminated early
-				sprintf(log_buffer, "OSS.C: PID: %d has terminated early after spending %.4f ms in the cpu/system\n", temp_pid, shm_ptr->pcb_arr[temp].cpu_time);
+				sprintf(log_buffer, "OSS: PID: %d has terminated early after spending %d ns in the cpu/system\n", temp_pid, shm_ptr->pcb_arr[temp].prev_burst);
 				log_string(log_buffer);
 				proc_used[temp] = 0;
 			}
@@ -231,13 +232,15 @@ int main(int argc, char* argv[]) {
 				//if it got blocked
 				blocked_queue[blocked_in] = temp_pid;
 				blocked_in = (blocked_in + 1) % MAX;
-				sprintf(log_buffer, "OSS.C: PID: %d has been blocked and is going into blocked queue. Last Burst: %d ns\n", temp_pid, shm_ptr->pcb_arr[temp].prev_burst);
+				sprintf(log_buffer, "OSS: PID: %d has been blocked and is going into blocked queue. Last Burst: %d ns\n", temp_pid, shm_ptr->pcb_arr[temp].prev_burst);
 				log_string(log_buffer); 
+				sprintf(log_buffer, "OSS: entire quantum not used by process, PID was blocked before it could use it all\n");
+				log_string(log_buffer);
 			}
 			else {
 				//only other condition is that it completed before being interupted
 				proc_used[temp] = 0;
-				sprintf(log_buffer, "OSS.C: PID: %d has finished. CPU time: %.2f ms System time: %.2f ms Last burst: %d ns\n", temp_pid, shm_ptr->pcb_arr[temp].cpu_time, shm_ptr->pcb_arr[temp].system_time, shm_ptr->pcb_arr[temp].prev_burst);
+				sprintf(log_buffer, "OSS: PID: %d has finished. CPU time: %.2f ms System time: %.2f ms Last burst: %d ns\n", temp_pid, shm_ptr->pcb_arr[temp].cpu_time, shm_ptr->pcb_arr[temp].system_time, shm_ptr->pcb_arr[temp].prev_burst);
 				log_string(log_buffer);
 			}
 
@@ -251,8 +254,10 @@ int main(int argc, char* argv[]) {
 		shm_ptr->clock_nano += nano_change;
 		normalize_clock();
 
+		/*
 		sprintf(log_buffer, "CLOCK: %d : %d \n", shm_ptr->clock_seconds, shm_ptr->clock_nano);
 		log_string(log_buffer);
+		*/
 	}
 
 	printf("exited qhile loop, about to cleanup\n");
@@ -348,7 +353,12 @@ void log_string(char* string) {
 
 	//log the passed string to the log file
 	fputs(string, file_ptr);
-
+	line_count++;
+	if (line_count >= 1000) {
+		printf("exiting because log file hit 1000 lines\n\n");
+		cleanup();
+		exit(0);
+	}
 }
 
 
@@ -427,11 +437,12 @@ void fork_user(int index) {
 			shm_ptr->pcb_arr[index].this_pid = pid;
 			proc_used[index] = 1;
 			initialize_pcb(index);
-			printf("PID: %d has been forked\n", pid);
+			//printf("PID: %d has been forked\n", pid);
 			ready_pids[ready_in] = shm_ptr->pcb_arr[index].this_pid;
-			printf("PID: %d was put in the ready queue at index %d\n", shm_ptr->pcb_arr[index].this_pid, ready_in);
+			sprintf(log_buffer, "OSS: PID: %d was forked in the ready queue at index %d\n", shm_ptr->pcb_arr[index].this_pid, ready_in);
+			log_string(log_buffer);
 			ready_in = (ready_in + 1) % MAX;
-			printf("ready in incremented\n");
+			//printf("ready in incremented\n");
 		}
 		else {
 			execl("./user", "./user", (char *)0);
@@ -466,7 +477,7 @@ void purge_blocked() {
 				blocked_queue[blocked_out] = 0;
 				blocked_out = (blocked_out + 1) % MAX;
 				ready_pids[ready_in] = pid;
-				printf("ready_in incremented in purge blocked()\n");
+				//printf("ready_in incremented in purge blocked()\n");
 				ready_in = (ready_in + 1) % MAX;
 
 			}
