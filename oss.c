@@ -16,6 +16,16 @@ int blocked_queue[MAX];
 int ready_in, ready_out, blocked_in, blocked_out;
 int temp_pid;
 int line_count = 0;
+long double cpu_time_total_IO = 0; 
+long double cpu_time_total_CPU = 0;
+long double sys_time_total_IO = 0;
+long double sys_time_total_CPU = 0;
+long double blocked_total_IO = 0;
+long double blocked_total_CPU = 0;
+int proc_finished_IO = 0;
+int proc_finished_CPU = 0;
+long double util_acc = 0;
+
 
 
 
@@ -37,6 +47,7 @@ void normalize_clock();
 void normalize_fork();
 void kill_pids();
 int count_ready();
+void report();
 
 
 int main(int argc, char* argv[]) {
@@ -132,7 +143,7 @@ int main(int argc, char* argv[]) {
 		exit(0);
 	}
 
-
+	alarm(max_time);
 
 	//initialize table for tracking which index PCBs are beeing occupied by children
 	for (i = 0; i < MAX; i++) {
@@ -223,6 +234,22 @@ int main(int argc, char* argv[]) {
 
 			//interpret what the result of the pcb means, log accordingly
 			if (shm_ptr->pcb_arr[temp].early_term) {
+				//updates data for report
+				if (shm_ptr->pcb_arr[temp].proc_type == IO) {
+					proc_finished_IO++;
+					cpu_time_total_IO += shm_ptr->pcb_arr[temp].cpu_time;
+					sys_time_total_IO += shm_ptr->pcb_arr[temp].system_time;
+					blocked_total_IO += (shm_ptr->pcb_arr[temp].system_time - shm_ptr->pcb_arr[temp].cpu_time);
+					util_acc += shm_ptr->pcb_arr[temp].cpu_time / 10;
+				}
+				else {
+					//updates data for report
+					proc_finished_CPU++;
+					cpu_time_total_CPU += shm_ptr->pcb_arr[temp].cpu_time;
+					sys_time_total_CPU += shm_ptr->pcb_arr[temp].system_time;
+					blocked_total_CPU += (shm_ptr->pcb_arr[temp].system_time - shm_ptr->pcb_arr[temp].cpu_time);
+					util_acc += shm_ptr->pcb_arr[temp].cpu_time / 10;
+				}
 				//if it terminated early
 				sprintf(log_buffer, "OSS: PID: %d has terminated early after spending %d ns in the cpu/system\n", temp_pid, shm_ptr->pcb_arr[temp].prev_burst);
 				log_string(log_buffer);
@@ -238,6 +265,22 @@ int main(int argc, char* argv[]) {
 				log_string(log_buffer);
 			}
 			else {
+				//updates data for report
+				if (shm_ptr->pcb_arr[temp].proc_type == IO) {
+					proc_finished_IO++;
+					cpu_time_total_IO += shm_ptr->pcb_arr[temp].cpu_time;
+					sys_time_total_IO += shm_ptr->pcb_arr[temp].system_time;
+					blocked_total_IO += (shm_ptr->pcb_arr[temp].system_time - shm_ptr->pcb_arr[temp].cpu_time);
+					util_acc += shm_ptr->pcb_arr[temp].cpu_time / 10;
+				}
+				//updates data for report
+				else {
+					proc_finished_CPU++;
+					cpu_time_total_CPU += shm_ptr->pcb_arr[temp].cpu_time;
+					sys_time_total_CPU += shm_ptr->pcb_arr[temp].system_time;
+					blocked_total_CPU += (shm_ptr->pcb_arr[temp].system_time - shm_ptr->pcb_arr[temp].cpu_time);
+					util_acc += shm_ptr->pcb_arr[temp].cpu_time / 10;
+				}
 				//only other condition is that it completed before being interupted
 				proc_used[temp] = 0;
 				sprintf(log_buffer, "OSS: PID: %d has finished. CPU time: %.2f ms System time: %.2f ms Last burst: %d ns\n", temp_pid, shm_ptr->pcb_arr[temp].cpu_time, shm_ptr->pcb_arr[temp].system_time, shm_ptr->pcb_arr[temp].prev_burst);
@@ -263,8 +306,20 @@ int main(int argc, char* argv[]) {
 	printf("exited qhile loop, about to cleanup\n");
 
 	//cleanup before exit
+	report();
 	cleanup();
 	return 0;
+}
+
+void report() {
+	util_acc /= (proc_finished_CPU + proc_finished_IO);
+	printf("average cpu time for IO processes: %.2Lf ms\n\n", cpu_time_total_IO / proc_finished_IO);
+	printf("average sys time for IO processes: %.2Lf ms\n\n", sys_time_total_IO / proc_finished_IO);
+	printf("average sys time for CPU processes: %.2Lf ms\n\n", sys_time_total_CPU / proc_finished_CPU);
+	printf("average cpu time for CPU processes: %.2Lf ms\n\n", cpu_time_total_CPU / proc_finished_CPU);
+	printf("average blocked time for CPU processes: %.2Lf ms\n\n", blocked_total_CPU / proc_finished_CPU);
+	printf("average blocked time for IO processes: %.2Lf ms\n\n", blocked_total_IO / proc_finished_IO);
+	printf("average cpu utilization: %.2Lf \n\n ", util_acc);
 }
 
 int count_ready() {
@@ -367,6 +422,7 @@ void log_string(char* string) {
 	line_count++;
 	if (line_count >= 1000) {
 		printf("exiting because log file hit 1000 lines\n\n");
+		report();
 		cleanup();
 		exit(0);
 	}
@@ -389,6 +445,7 @@ void initialize_pcb(int index) {
 	shm_ptr->pcb_arr[index].system_time = 0;
 	shm_ptr->pcb_arr[index].prev_burst = 0;
 	shm_ptr->pcb_arr[index].this_index = index;
+	shm_ptr->pcb_arr[index].proc_type = CPU;
 
 }
 
@@ -533,6 +590,7 @@ void kill_pids() {
 }
 
 void early_termination_handler() {
+	report();
 	cleanup();
 	sleep(2);
 	exit(0);

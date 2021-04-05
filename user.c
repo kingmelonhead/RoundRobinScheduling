@@ -44,8 +44,8 @@ int main(int argc, char* argv[]) {
 	unsigned int burst;
 	bool finished = false;
 
-	float sec_to_ms;
-	float nano_to_ms;
+	double sec_to_ms;
+	double nano_to_ms;
 
 	//create the shared memory
 	if (get_shm() == -1) {
@@ -149,7 +149,7 @@ int main(int argc, char* argv[]) {
 		burst = rand() % ((10000000 + 1) - 1) + 1;
 		shm_ptr->pcb_arr[user_index].prev_burst = burst;
 
-		shm_ptr->pcb_arr[user_index].cpu_time += (float)burst/1000000;
+		shm_ptr->pcb_arr[user_index].cpu_time += (double)burst/1000000;
 
 		if (finished) {
 			sec_diff = shm_ptr->clock_seconds - shm_ptr->pcb_arr[user_index].start_sec;
@@ -158,8 +158,8 @@ int main(int argc, char* argv[]) {
 			shm_ptr->pcb_arr[user_index].start_nano += burst;
 			normalize_time();
 			shm_ptr->pcb_arr[user_index].start_sec = sec_diff;
-			sec_to_ms = (float)shm_ptr->pcb_arr[user_index].start_sec * 1000;
-			nano_to_ms = (float)shm_ptr->pcb_arr[user_index].start_nano / 1000000;
+			sec_to_ms = (double)shm_ptr->pcb_arr[user_index].start_sec * 1000;
+			nano_to_ms = (double)shm_ptr->pcb_arr[user_index].start_nano / 1000000;
 			shm_ptr->pcb_arr[user_index].system_time = sec_to_ms + nano_to_ms;
 			sem_signal(shm_id);
 			break;
